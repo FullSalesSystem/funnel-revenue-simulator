@@ -1,0 +1,106 @@
+'use client';
+
+import React from 'react';
+import { FunnelResults } from '@/calculations/funnelEngine';
+import { formatCurrency, formatPercent, formatNumber } from '@/utils/formatters';
+
+interface FunnelVisualizationProps {
+  results: FunnelResults;
+}
+
+const stages = [
+  { key: 'impressions', label: 'Impressoes', volumeKey: 'impressions' as const, costLabel: 'CPM', costKey: 'cpm' as const },
+  { key: 'clicks', label: 'Cliques', volumeKey: 'clicks' as const, costLabel: 'CPC', costKey: 'cpc' as const },
+  { key: 'pageLoads', label: 'Pagina Carregada', volumeKey: 'pageLoads' as const, costLabel: 'Custo/Pag', costKey: 'costPerPage' as const },
+  { key: 'checkoutStarts', label: 'Inicio de Checkout', volumeKey: 'checkoutStarts' as const, costLabel: 'Custo/Check', costKey: 'costPerCheckout' as const },
+  { key: 'appointmentPurchases', label: 'Compra de Agendamento', volumeKey: 'appointmentPurchases' as const, costLabel: 'Custo/Agend', costKey: 'costPerAppointment' as const },
+  { key: 'consultationsAttended', label: 'Consulta Comparecida', volumeKey: 'consultationsAttended' as const, costLabel: 'Custo/Cons', costKey: 'costPerConsultation' as const },
+  { key: 'treatmentsClosed', label: 'Tratamento Fechado', volumeKey: 'treatmentsClosed' as const, costLabel: 'CPA', costKey: 'cpa' as const },
+];
+
+const ratesBetween = [
+  { label: 'CTR', key: 'ctr' as const },
+  { label: 'Conexao', key: 'connectionRate' as const },
+  { label: 'Conv. Pagina', key: 'pageConversionRate' as const },
+  { label: 'Conv. Checkout', key: 'checkoutConversionRate' as const },
+  { label: 'Agendamento', key: 'appointmentRate' as const },
+  { label: 'Comparecimento', key: 'showUpRate' as const },
+];
+
+const COLORS = [
+  'from-indigo-600 to-indigo-500',
+  'from-blue-600 to-blue-500',
+  'from-cyan-600 to-cyan-500',
+  'from-teal-600 to-teal-500',
+  'from-emerald-600 to-emerald-500',
+  'from-green-600 to-green-500',
+  'from-lime-600 to-lime-500',
+];
+
+const WIDTHS = [100, 88, 76, 64, 52, 42, 34];
+
+export default function FunnelVisualization({ results }: FunnelVisualizationProps) {
+  const maxVolume = results.volumes.impressions || 1;
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-6">
+      <h2 className="text-xl font-bold text-white mb-6">Funil de Vendas</h2>
+      <div className="flex flex-col items-center space-y-1">
+        {stages.map((stage, index) => {
+          const volume = results.volumes[stage.volumeKey];
+          const cost = results.financials[stage.costKey];
+          const widthPercent = WIDTHS[index];
+
+          return (
+            <React.Fragment key={stage.key}>
+              {/* Rate between stages */}
+              {index > 0 && (
+                <div className="flex items-center justify-center w-full py-1">
+                  <div className="flex items-center gap-2 bg-gray-700/50 rounded-full px-3 py-0.5">
+                    <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    <span className="text-xs text-gray-300 font-medium">
+                      {ratesBetween[index - 1].label}: {formatPercent(results.rates[ratesBetween[index - 1].key])}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage bar */}
+              <div
+                className={`bg-gradient-to-r ${COLORS[index]} rounded-lg px-4 py-3 flex items-center justify-between text-white shadow-lg transition-all duration-300`}
+                style={{ width: `${widthPercent}%`, minWidth: '280px' }}
+              >
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium opacity-80">{stage.label}</span>
+                  <span className="text-lg font-bold">{formatNumber(volume, volume < 10 ? 2 : 0)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-xs opacity-80">{stage.costLabel}</span>
+                  <span className="text-sm font-semibold">{formatCurrency(cost)}</span>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Bottom summary */}
+      <div className="mt-6 grid grid-cols-3 gap-4 border-t border-gray-700 pt-4">
+        <div className="text-center">
+          <p className="text-xs text-gray-400">Conv. Total do Funil</p>
+          <p className="text-lg font-bold text-blue-400">{formatPercent(results.rates.funnelConversionRate)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-400">Receita Total</p>
+          <p className="text-lg font-bold text-emerald-400">{formatCurrency(results.indicators.totalRevenue)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-400">ROAS</p>
+          <p className="text-lg font-bold text-yellow-400">{results.indicators.roas.toFixed(2)}x</p>
+        </div>
+      </div>
+    </div>
+  );
+}
