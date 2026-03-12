@@ -25,10 +25,10 @@ function MetricRow({
   isPercent?: boolean;
 }) {
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-700/50 last:border-0">
-      <span className="text-sm text-gray-400">{label}</span>
-      <div className="flex items-center">
-        <span className="text-sm font-semibold text-gray-100">{value}</span>
+    <div className="flex justify-between items-center py-2 border-b border-white/[0.04] last:border-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-semibold text-gray-200">{value}</span>
         <ComparisonBadge
           current={current}
           baseline={baselineValue}
@@ -42,8 +42,8 @@ function MetricRow({
 
 function MetricCard({ title, children, color }: { title: string; children: React.ReactNode; color: string }) {
   return (
-    <div className="bg-gray-800 rounded-xl p-6">
-      <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${color}`}>{title}</h3>
+    <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+      <h3 className={`text-[11px] font-semibold uppercase tracking-widest mb-3 ${color}`}>{title}</h3>
       <div className="space-y-0">{children}</div>
     </div>
   );
@@ -54,8 +54,8 @@ export default function MetricsDisplay({ results, baseline }: MetricsDisplayProp
   const b = baseline;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <MetricCard title="Volume" color="text-blue-400">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <MetricCard title="Volume" color="text-blue-400/80">
         <MetricRow label="Impressoes" value={fmt(results.volumes.impressions)} current={results.volumes.impressions} baselineValue={b?.volumes.impressions ?? null} />
         <MetricRow label="Cliques" value={fmt(results.volumes.clicks)} current={results.volumes.clicks} baselineValue={b?.volumes.clicks ?? null} />
         <MetricRow label="Paginas Carregadas" value={fmt(results.volumes.pageLoads)} current={results.volumes.pageLoads} baselineValue={b?.volumes.pageLoads ?? null} />
@@ -65,7 +65,7 @@ export default function MetricsDisplay({ results, baseline }: MetricsDisplayProp
         <MetricRow label="Fecham Tratamento" value={fmt(results.volumes.treatmentsClosed)} current={results.volumes.treatmentsClosed} baselineValue={b?.volumes.treatmentsClosed ?? null} />
       </MetricCard>
 
-      <MetricCard title="Taxas" color="text-cyan-400">
+      <MetricCard title="Taxas" color="text-cyan-400/80">
         <MetricRow label="CTR" value={formatPercent(results.rates.ctr)} current={results.rates.ctr} baselineValue={b?.rates.ctr ?? null} isPercent />
         <MetricRow label="Taxa de Conexao" value={formatPercent(results.rates.connectionRate)} current={results.rates.connectionRate} baselineValue={b?.rates.connectionRate ?? null} isPercent />
         <MetricRow label="Conv. da Pagina" value={formatPercent(results.rates.pageConversionRate)} current={results.rates.pageConversionRate} baselineValue={b?.rates.pageConversionRate ?? null} isPercent />
@@ -76,7 +76,7 @@ export default function MetricsDisplay({ results, baseline }: MetricsDisplayProp
         <MetricRow label="Conv. do Funil" value={formatPercent(results.rates.funnelConversionRate)} current={results.rates.funnelConversionRate} baselineValue={b?.rates.funnelConversionRate ?? null} isPercent />
       </MetricCard>
 
-      <MetricCard title="Financeiro" color="text-amber-400">
+      <MetricCard title="Financeiro" color="text-amber-400/80">
         <MetricRow label="CPM" value={formatCurrency(results.financials.cpm)} current={results.financials.cpm} baselineValue={b?.financials.cpm ?? null} higherIsBetter={false} />
         <MetricRow label="CPC" value={formatCurrency(results.financials.cpc)} current={results.financials.cpc} baselineValue={b?.financials.cpc ?? null} higherIsBetter={false} />
         <MetricRow label="Custo por Pagina" value={formatCurrency(results.financials.costPerPage)} current={results.financials.costPerPage} baselineValue={b?.financials.costPerPage ?? null} higherIsBetter={false} />
@@ -86,7 +86,7 @@ export default function MetricsDisplay({ results, baseline }: MetricsDisplayProp
         <MetricRow label="CPA (Custo por Venda)" value={formatCurrency(results.financials.cpa)} current={results.financials.cpa} baselineValue={b?.financials.cpa ?? null} higherIsBetter={false} />
       </MetricCard>
 
-      <MetricCard title="Indicadores" color="text-emerald-400">
+      <MetricCard title="Indicadores" color="text-emerald-400/80">
         <MetricRow label="Receita Total" value={formatCurrency(results.indicators.totalRevenue)} current={results.indicators.totalRevenue} baselineValue={b?.indicators.totalRevenue ?? null} />
         <MetricRow label="ROAS" value={`${results.indicators.roas.toFixed(2)}x`} current={results.indicators.roas} baselineValue={b?.indicators.roas ?? null} />
         <MetricRow label="Conv. Total do Funil" value={formatPercent(results.indicators.totalFunnelConversion)} current={results.indicators.totalFunnelConversion} baselineValue={b?.indicators.totalFunnelConversion ?? null} isPercent />

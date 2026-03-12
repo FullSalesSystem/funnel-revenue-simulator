@@ -8,7 +8,7 @@ interface FunnelChartProps {
   results: FunnelResults;
 }
 
-const COLORS = ['#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#22c55e', '#84cc16', '#eab308'];
+const COLORS = ['#818cf8', '#60a5fa', '#22d3ee', '#2dd4bf', '#34d399', '#a3e635', '#facc15'];
 
 export default function FunnelBarChart({ results }: FunnelChartProps) {
   const data = [
@@ -32,39 +32,39 @@ export default function FunnelBarChart({ results }: FunnelChartProps) {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Volume por Etapa</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-            <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">Volume por Etapa</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+              contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
               formatter={(value) => [formatNumber(Number(value), 0), 'Volume']}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
               {data.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Custo por Etapa</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={costData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-            <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">Custo por Etapa</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={costData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+              contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
               formatter={(value) => [formatCurrency(Number(value)), 'Custo']}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
               {costData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
               ))}
             </Bar>
           </BarChart>
