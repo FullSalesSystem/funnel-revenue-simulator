@@ -6,6 +6,7 @@ import { formatCurrency, formatPercent, formatNumber } from '@/utils/formatters'
 
 interface FunnelVisualizationProps {
   results: FunnelResults;
+  baseline: FunnelResults | null;
 }
 
 const stages = [
@@ -39,9 +40,20 @@ const COLORS = [
 
 const WIDTHS = [100, 88, 76, 64, 52, 42, 34];
 
-export default function FunnelVisualization({ results }: FunnelVisualizationProps) {
-  const maxVolume = results.volumes.impressions || 1;
+function VolumeDelta({ current, baselineVal }: { current: number; baselineVal: number | undefined }) {
+  if (baselineVal === undefined || baselineVal === 0) return null;
+  const diff = current - baselineVal;
+  const pct = (diff / Math.abs(baselineVal)) * 100;
+  if (Math.abs(pct) < 0.01) return null;
+  const isUp = diff > 0;
+  return (
+    <span className={`text-[10px] font-bold ${isUp ? 'text-emerald-300' : 'text-red-300'}`}>
+      {isUp ? '\u2191' : '\u2193'} {pct > 0 ? '+' : ''}{pct.toFixed(1)}%
+    </span>
+  );
+}
 
+export default function FunnelVisualization({ results, baseline }: FunnelVisualizationProps) {
   return (
     <div className="bg-gray-800 rounded-xl p-6">
       <h2 className="text-xl font-bold text-white mb-6">Funil de Vendas</h2>
@@ -50,10 +62,10 @@ export default function FunnelVisualization({ results }: FunnelVisualizationProp
           const volume = results.volumes[stage.volumeKey];
           const cost = results.financials[stage.costKey];
           const widthPercent = WIDTHS[index];
+          const baselineVol = baseline?.volumes[stage.volumeKey];
 
           return (
             <React.Fragment key={stage.key}>
-              {/* Rate between stages */}
               {index > 0 && (
                 <div className="flex items-center justify-center w-full py-1">
                   <div className="flex items-center gap-2 bg-gray-700/50 rounded-full px-3 py-0.5">
@@ -67,14 +79,16 @@ export default function FunnelVisualization({ results }: FunnelVisualizationProp
                 </div>
               )}
 
-              {/* Stage bar */}
               <div
                 className={`bg-gradient-to-r ${COLORS[index]} rounded-lg px-4 py-3 flex items-center justify-between text-white shadow-lg transition-all duration-300`}
                 style={{ width: `${widthPercent}%`, minWidth: '280px' }}
               >
                 <div className="flex flex-col">
                   <span className="text-xs font-medium opacity-80">{stage.label}</span>
-                  <span className="text-lg font-bold">{formatNumber(volume, volume < 10 ? 2 : 0)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold">{formatNumber(volume, volume < 10 ? 2 : 0)}</span>
+                    <VolumeDelta current={volume} baselineVal={baselineVol} />
+                  </div>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-xs opacity-80">{stage.costLabel}</span>
@@ -86,7 +100,6 @@ export default function FunnelVisualization({ results }: FunnelVisualizationProp
         })}
       </div>
 
-      {/* Bottom summary */}
       <div className="mt-6 grid grid-cols-3 gap-4 border-t border-gray-700 pt-4">
         <div className="text-center">
           <p className="text-xs text-gray-400">Conv. Total do Funil</p>

@@ -71,9 +71,9 @@ export interface FunnelResults {
 
 export function getDefaultInputs(): FunnelInputs {
   return {
-    impressions: 1000,
+    impressions: 10000,
     cpm: 100,
-    mediaCost: 100,
+    mediaCost: 1000,
     ctr: 1.5,
     connectionRate: 75,
     pageConversionRate: 10,
