@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Funnel Revenue Simulator - Simulador de Funil de Vendas",
-  description: "Sistema inteligente de analise, simulacao e diagnostico de funis de vendas",
+  title: "Funnel Revenue Simulator - Simulador de Funis de Vendas High-Ticket",
+  description: "Simulador inteligente de funis de vendas high-ticket: high-ticket direto, webinar, isca paga, isca gratuita e desafio pago.",
 };
 
 export default function RootLayout({

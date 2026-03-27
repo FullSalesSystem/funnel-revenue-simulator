@@ -1,32 +1,15 @@
 'use client';
 
 import React from 'react';
-import { FunnelResults } from '@/calculations/funnelEngine';
-import { formatCurrency, formatPercent, formatNumber } from '@/utils/formatters';
+import { FunnelTypeConfig } from '@/calculations/funnelTypes';
+import { GenericResults } from '@/calculations/genericEngine';
+import { formatCurrency, formatPercent, formatInteger } from '@/utils/formatters';
 
 interface FunnelVisualizationProps {
-  results: FunnelResults;
-  baseline: FunnelResults | null;
+  config: FunnelTypeConfig;
+  results: GenericResults;
+  baseline: GenericResults | null;
 }
-
-const stages = [
-  { key: 'impressions', label: 'Impressoes', volumeKey: 'impressions' as const, costLabel: 'CPM', costKey: 'cpm' as const },
-  { key: 'clicks', label: 'Cliques', volumeKey: 'clicks' as const, costLabel: 'CPC', costKey: 'cpc' as const },
-  { key: 'pageLoads', label: 'Pagina Carregada', volumeKey: 'pageLoads' as const, costLabel: 'Custo/Pag', costKey: 'costPerPage' as const },
-  { key: 'checkoutStarts', label: 'Inicio de Checkout', volumeKey: 'checkoutStarts' as const, costLabel: 'Custo/Check', costKey: 'costPerCheckout' as const },
-  { key: 'appointmentPurchases', label: 'Compra de Agendamento', volumeKey: 'appointmentPurchases' as const, costLabel: 'Custo/Agend', costKey: 'costPerAppointment' as const },
-  { key: 'consultationsAttended', label: 'Consulta Comparecida', volumeKey: 'consultationsAttended' as const, costLabel: 'Custo/Cons', costKey: 'costPerConsultation' as const },
-  { key: 'treatmentsClosed', label: 'Tratamento Fechado', volumeKey: 'treatmentsClosed' as const, costLabel: 'CPA', costKey: 'cpa' as const },
-];
-
-const ratesBetween = [
-  { label: 'CTR', key: 'ctr' as const },
-  { label: 'Conexao', key: 'connectionRate' as const },
-  { label: 'Conv. Pagina', key: 'pageConversionRate' as const },
-  { label: 'Conv. Checkout', key: 'checkoutConversionRate' as const },
-  { label: 'Agendamento', key: 'appointmentRate' as const },
-  { label: 'Comparecimento', key: 'showUpRate' as const },
-];
 
 const COLORS = [
   'from-indigo-500/80 to-indigo-400/60',
@@ -36,9 +19,10 @@ const COLORS = [
   'from-emerald-500/80 to-emerald-400/60',
   'from-green-500/80 to-green-400/60',
   'from-lime-500/80 to-lime-400/60',
+  'from-yellow-500/80 to-yellow-400/60',
+  'from-amber-500/80 to-amber-400/60',
+  'from-orange-500/80 to-orange-400/60',
 ];
-
-const WIDTHS = [100, 88, 76, 64, 52, 42, 34];
 
 function VolumeDelta({ current, baselineVal }: { current: number; baselineVal: number | undefined }) {
   if (baselineVal === undefined || baselineVal === 0) return null;
@@ -53,16 +37,36 @@ function VolumeDelta({ current, baselineVal }: { current: number; baselineVal: n
   );
 }
 
-export default function FunnelVisualization({ results, baseline }: FunnelVisualizationProps) {
+function getWidths(count: number): number[] {
+  const widths: number[] = [];
+  for (let i = 0; i < count; i++) {
+    widths.push(Math.max(30, 100 - i * Math.floor(60 / Math.max(count - 1, 1))));
+  }
+  return widths;
+}
+
+export default function FunnelVisualization({ config, results, baseline }: FunnelVisualizationProps) {
+  // Build stages array: impressions + all config stages
+  const allStages = [
+    { key: 'impressions', label: 'Impressoes', costLabel: 'CPM', rateLabel: '' },
+    ...config.stages,
+  ];
+
+  const widths = getWidths(allStages.length);
+
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-6">
       <h2 className="text-base font-semibold text-white mb-6">Funil de Vendas</h2>
       <div className="flex flex-col items-center space-y-0.5">
-        {stages.map((stage, index) => {
-          const volume = results.volumes[stage.volumeKey];
-          const cost = results.financials[stage.costKey];
-          const widthPercent = WIDTHS[index];
-          const baselineVol = baseline?.volumes[stage.volumeKey];
+        {allStages.map((stage, index) => {
+          const volume = results.volumes[stage.key] ?? 0;
+          const cost = results.costs[stage.key] ?? 0;
+          const widthPercent = widths[index];
+          const baselineVol = baseline?.volumes[stage.key];
+          const idealCost = stage.key !== 'impressions' && results.idealCosts
+            ? results.idealCosts[stage.key] ?? null
+            : null;
+          const colorIndex = index % COLORS.length;
 
           return (
             <React.Fragment key={stage.key}>
@@ -73,26 +77,31 @@ export default function FunnelVisualization({ results, baseline }: FunnelVisuali
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                     </svg>
                     <span className="text-[11px] text-gray-500 font-medium">
-                      {ratesBetween[index - 1].label}: {formatPercent(results.rates[ratesBetween[index - 1].key])}
+                      {config.stages[index - 1].rateLabel}: {formatPercent(results.rates[config.stages[index - 1].key] ?? 0)}
                     </span>
                   </div>
                 </div>
               )}
 
               <div
-                className={`bg-gradient-to-r ${COLORS[index]} backdrop-blur-sm rounded-lg px-4 py-2.5 flex items-center justify-between text-white transition-all duration-300 hover:scale-[1.01]`}
+                className={`bg-gradient-to-r ${COLORS[colorIndex]} backdrop-blur-sm rounded-lg px-4 py-2.5 flex items-center justify-between text-white transition-all duration-300 hover:scale-[1.01]`}
                 style={{ width: `${widthPercent}%`, minWidth: '260px' }}
               >
                 <div className="flex flex-col">
                   <span className="text-[10px] font-medium opacity-70 uppercase tracking-wide">{stage.label}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-bold">{formatNumber(volume, volume < 10 ? 2 : 0)}</span>
+                    <span className="text-base font-bold">{formatInteger(Math.round(volume))}</span>
                     <VolumeDelta current={volume} baselineVal={baselineVol} />
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] opacity-60">{stage.costLabel}</span>
                   <span className="text-xs font-semibold">{formatCurrency(cost)}</span>
+                  {idealCost !== null && (
+                    <span className={`text-[9px] font-medium ${cost > idealCost ? 'text-red-300' : 'text-emerald-300'}`}>
+                      Max: {formatCurrency(idealCost)}
+                    </span>
+                  )}
                 </div>
               </div>
             </React.Fragment>
@@ -103,15 +112,15 @@ export default function FunnelVisualization({ results, baseline }: FunnelVisuali
       <div className="mt-6 grid grid-cols-3 gap-4 border-t border-white/[0.06] pt-4">
         <div className="text-center">
           <p className="text-[10px] text-gray-500 uppercase tracking-wide">Conv. Total</p>
-          <p className="text-base font-bold text-blue-400">{formatPercent(results.rates.funnelConversionRate)}</p>
+          <p className="text-base font-bold text-blue-400">{formatPercent(results.funnelConversionRate)}</p>
         </div>
         <div className="text-center">
           <p className="text-[10px] text-gray-500 uppercase tracking-wide">Receita</p>
-          <p className="text-base font-bold text-emerald-400">{formatCurrency(results.indicators.totalRevenue)}</p>
+          <p className="text-base font-bold text-emerald-400">{formatCurrency(results.totalRevenue)}</p>
         </div>
         <div className="text-center">
           <p className="text-[10px] text-gray-500 uppercase tracking-wide">ROAS</p>
-          <p className="text-base font-bold text-yellow-400">{results.indicators.roas.toFixed(2)}x</p>
+          <p className="text-base font-bold text-yellow-400">{results.roas.toFixed(2)}x</p>
         </div>
       </div>
     </div>
