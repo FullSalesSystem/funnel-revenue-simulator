@@ -65,8 +65,42 @@ export default function Home() {
 
       {/* Funnel selector */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        {/* Ferramenta principal: Funil de Aplicacao */}
+        <Link
+          href="/aplicacao"
+          className="group relative overflow-hidden block mb-10 rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-500/[0.08] via-white/[0.03] to-transparent p-6 sm:p-7 transition-all duration-300 hover:border-indigo-400/40"
+        >
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-indigo-500 via-blue-500 to-emerald-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4h18M6 9h12M9 14h6M11 19h2" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  Funil de Aplicacao — Visao Completa
+                </h3>
+                <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300">
+                  Principal
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed max-w-2xl">
+                Acompanhe o funil inteiro com dados reais: metricas absolutas, relativas e de custo em cada etapa,
+                drop-off pergunta a pergunta, meta de 7x no custo por reuniao e plano de otimizacao com acoes prontas.
+              </p>
+            </div>
+            <div className="hidden sm:block opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+              <svg className="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+          </div>
+        </Link>
+
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-1">Escolha o tipo de funil</h2>
+          <h2 className="text-lg font-semibold text-white mb-1">Ou simule por tipo de funil</h2>
           <p className="text-sm text-gray-500">
             Selecione o modelo de funil que mais se aproxima da sua operacao para simular receita, custos e diagnosticar gargalos.
           </p>
