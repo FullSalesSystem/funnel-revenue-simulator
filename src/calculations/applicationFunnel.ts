@@ -145,7 +145,8 @@ export const RATE_DEFS: RateMetricDef[] = [
     shortLabel: 'Comparecimento',
     fromLabel: 'Reuniões Agendadas',
     toLabel: 'Reuniões Realizadas',
-    benchmark: { bad: { max: 60 }, good: { min: 60, max: 80 }, excellent: { min: 80 } },
+    // benchmark do funil High-Ticket Direto (/simulator/high-ticket)
+    benchmark: { bad: { max: 75 }, good: { min: 75, max: 90 }, excellent: { min: 90 } },
     playbookKey: 'attendance',
   },
   {
@@ -154,7 +155,8 @@ export const RATE_DEFS: RateMetricDef[] = [
     shortLabel: 'Fechamento',
     fromLabel: 'Reuniões Realizadas',
     toLabel: 'Fechamentos',
-    benchmark: { bad: { max: 15 }, good: { min: 15, max: 30 }, excellent: { min: 30 } },
+    // benchmark do funil High-Ticket Direto (/simulator/high-ticket)
+    benchmark: { bad: { max: 20 }, good: { min: 20, max: 40 }, excellent: { min: 40 } },
     playbookKey: 'close',
   },
 ];
@@ -573,6 +575,205 @@ export function analyzeTicketPricing(closeRate: number): PricingAnalysis {
   if (closeRate >= 40) return { isUnderpriced: true, multiplierRange: '1x–1,5x', message: `Fechamento de ${closeRate.toFixed(0)}% sugere que o ticket pode subir até 1,5x.` };
   if (closeRate >= 20) return { isUnderpriced: false, multiplierRange: '', message: `Fechamento de ${closeRate.toFixed(0)}% indica precificação correta para o momento.` };
   return { isUnderpriced: false, multiplierRange: '', message: `Fechamento de ${closeRate.toFixed(0)}% está abaixo de 20% — antes de mexer no preço, conserte o processo comercial.` };
+}
+
+// ─── PLANEJADOR DE META (engenharia reversa a partir do faturamento-alvo) ────
+// Benchmarks de referência: os mesmos usados no funil High-Ticket Direto
+// (/simulator/high-ticket), adaptados às etapas do funil de aplicação.
+
+export type PlanLevel = 'atual' | 'bom' | 'otimo';
+
+export interface GoalStageRequirement {
+  key: string;
+  label: string;
+  /** volume atual informado pelo cliente */
+  today: number;
+  /** volume necessário para a meta neste cenário */
+  required: number;
+  /** required / today (0 quando today = 0) */
+  multiplier: number;
+}
+
+export interface GoalScenario {
+  level: PlanLevel;
+  label: string;
+  sublabel: string;
+  /** false quando alguma taxa = 0 impede reconstruir o funil */
+  feasible: boolean;
+  stages: GoalStageRequirement[];
+  /** investimento estimado comprando as impressões necessárias ao CPM atual */
+  requiredInvestment: number | null;
+  investmentMultiplier: number | null;
+  costPerAttended: number | null;
+  revenuePerAttended: number;
+  metaRatio: number | null;
+  metaOk: boolean | null;
+}
+
+export interface GoalAdjustment {
+  key: RateKey;
+  label: string;
+  shortLabel: string;
+  playbookKey: string;
+  current: number;
+  tier: Tier;
+  benchmark: Benchmark;
+  targetGood: number;
+  targetExcellent: number;
+  /** R$ de investimento economizado por mês se SÓ esta taxa for ao piso do "ótimo" */
+  investmentSaved: number | null;
+  /** redução % das impressões necessárias no mesmo movimento */
+  impressionsReduction: number | null;
+}
+
+export interface GoalPlanResult {
+  revenueGoal: number;
+  ticket: number;
+  closesNeeded: number;
+  /** receita real entregue pelos fechamentos arredondados p/ cima */
+  planRevenue: number;
+  cpm: number | null;
+  scenarios: GoalScenario[];
+  /** métricas abaixo do "ótimo", ordenadas pela economia que geram */
+  adjustments: GoalAdjustment[];
+}
+
+const PLAN_STAGE_LABELS: { key: string; label: string }[] = [
+  { key: 'impressions', label: 'Impressões' },
+  { key: 'clicks', label: 'Cliques' },
+  { key: 'pageViews', label: 'Visualizações de Página' },
+  { key: 'starts', label: 'Inícios de Aplicação' },
+  { key: 'registrations', label: 'Cadastros' },
+  { key: 'qualified', label: 'Leads Qualificados' },
+  { key: 'scheduled', label: 'Reuniões Agendadas' },
+  { key: 'attended', label: 'Reuniões Realizadas' },
+  { key: 'closed', label: 'Fechamentos' },
+];
+
+/** Taxas do cenário: atuais, ou elevadas ao piso do bench (nunca rebaixa o que já está acima) */
+function ratesAtLevel(results: ApplicationResults, level: PlanLevel): Record<RateKey, number> {
+  const out = {} as Record<RateKey, number>;
+  for (const def of RATE_DEFS) {
+    const current = results.ratesByKey[def.key].value;
+    if (level === 'atual') out[def.key] = current;
+    else {
+      const floor = level === 'bom' ? def.benchmark.good.min : def.benchmark.excellent.min;
+      out[def.key] = Math.max(current, floor);
+    }
+  }
+  return out;
+}
+
+/** Reconstrói o funil de trás pra frente a partir dos fechamentos necessários */
+function volumesForCloses(closesNeeded: number, rates: Record<RateKey, number>): Record<string, number> | null {
+  const chain: RateKey[] = ['close', 'attendance', 'scheduling', 'qualification', 'completion', 'start', 'connection', 'ctr'];
+  if (chain.some((k) => rates[k] <= 0)) return null;
+  const attended = closesNeeded / (rates.close / 100);
+  const scheduled = attended / (rates.attendance / 100);
+  const qualified = scheduled / (rates.scheduling / 100);
+  const registrations = qualified / (rates.qualification / 100);
+  const starts = registrations / (rates.completion / 100);
+  const pageViews = starts / (rates.start / 100);
+  const clicks = pageViews / (rates.connection / 100);
+  const impressions = clicks / (rates.ctr / 100);
+  return { impressions, clicks, pageViews, starts, registrations, qualified, scheduled, attended, closed: closesNeeded };
+}
+
+export function planForGoal(results: ApplicationResults, revenueGoal: number): GoalPlanResult {
+  const { inputs } = results;
+  const ticket = inputs.averageTicket;
+  const closesNeeded = ticket > 0 ? Math.ceil(revenueGoal / ticket) : 0;
+  const planRevenue = closesNeeded * ticket;
+  const cpm = inputs.impressions > 0 && inputs.investment > 0
+    ? (inputs.investment / inputs.impressions) * 1000
+    : null;
+
+  const todayByKey: Record<string, number> = {
+    impressions: inputs.impressions,
+    clicks: inputs.clicks,
+    pageViews: inputs.pageViews,
+    starts: inputs.applicationStarts,
+    registrations: inputs.registrations,
+    qualified: inputs.qualified,
+    scheduled: inputs.scheduled,
+    attended: inputs.attended,
+    closed: inputs.closed,
+  };
+
+  const buildScenario = (level: PlanLevel, label: string, sublabel: string): GoalScenario => {
+    const rates = ratesAtLevel(results, level);
+    const volumes = closesNeeded > 0 ? volumesForCloses(closesNeeded, rates) : null;
+    if (!volumes) {
+      return {
+        level, label, sublabel, feasible: false, stages: [],
+        requiredInvestment: null, investmentMultiplier: null,
+        costPerAttended: null, revenuePerAttended: 0, metaRatio: null, metaOk: null,
+      };
+    }
+    const stages: GoalStageRequirement[] = PLAN_STAGE_LABELS.map(({ key, label: stageLabel }) => ({
+      key,
+      label: stageLabel,
+      today: todayByKey[key],
+      required: volumes[key],
+      multiplier: todayByKey[key] > 0 ? volumes[key] / todayByKey[key] : 0,
+    }));
+    const requiredInvestment = cpm !== null ? (volumes.impressions / 1000) * cpm : null;
+    const costPerAttended = requiredInvestment !== null ? requiredInvestment / volumes.attended : null;
+    const revenuePerAttended = planRevenue / volumes.attended;
+    const metaRatio = costPerAttended !== null && costPerAttended > 0 ? revenuePerAttended / costPerAttended : null;
+    return {
+      level, label, sublabel, feasible: true, stages,
+      requiredInvestment,
+      investmentMultiplier: requiredInvestment !== null && inputs.investment > 0 ? requiredInvestment / inputs.investment : null,
+      costPerAttended, revenuePerAttended, metaRatio,
+      metaOk: metaRatio !== null ? metaRatio >= META_TARGET : null,
+    };
+  };
+
+  const scenarios = [
+    buildScenario('atual', 'Com suas taxas atuais', 'nenhuma otimização, só mais volume'),
+    buildScenario('bom', 'Taxas no Bom', 'cada taxa em pelo menos o piso do "bom"'),
+    buildScenario('otimo', 'Taxas no Ótimo', 'cada taxa em pelo menos o piso do "ótimo"'),
+  ];
+
+  // Ajustes: quanto cada taxa abaixo do "ótimo" economiza se for a única otimizada
+  const baseRates = ratesAtLevel(results, 'atual');
+  const baseVolumes = closesNeeded > 0 ? volumesForCloses(closesNeeded, baseRates) : null;
+  const adjustments: GoalAdjustment[] = [];
+  for (const def of RATE_DEFS) {
+    const r = results.ratesByKey[def.key];
+    const targetExcellent = def.benchmark.excellent.min;
+    if (r.value >= targetExcellent) continue;
+    let investmentSaved: number | null = null;
+    let impressionsReduction: number | null = null;
+    if (baseVolumes) {
+      const withFix = volumesForCloses(closesNeeded, { ...baseRates, [def.key]: targetExcellent });
+      if (withFix) {
+        impressionsReduction = baseVolumes.impressions > 0
+          ? (1 - withFix.impressions / baseVolumes.impressions) * 100
+          : null;
+        investmentSaved = cpm !== null
+          ? ((baseVolumes.impressions - withFix.impressions) / 1000) * cpm
+          : null;
+      }
+    }
+    adjustments.push({
+      key: def.key,
+      label: def.label,
+      shortLabel: def.shortLabel,
+      playbookKey: def.playbookKey,
+      current: r.value,
+      tier: r.tier,
+      benchmark: def.benchmark,
+      targetGood: def.benchmark.good.min,
+      targetExcellent,
+      investmentSaved,
+      impressionsReduction,
+    });
+  }
+  adjustments.sort((a, b) => (b.investmentSaved ?? -1) - (a.investmentSaved ?? -1));
+
+  return { revenueGoal, ticket, closesNeeded, planRevenue, cpm, scenarios, adjustments };
 }
 
 // ─── PLAYBOOKS (textos prontos de otimização) ────────────────────────────────

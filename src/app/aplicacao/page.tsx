@@ -14,6 +14,7 @@ import QuestionDropoff from '@/components/application/QuestionDropoff';
 import MetricsTable from '@/components/application/MetricsTable';
 import QualificationCard from '@/components/application/QualificationCard';
 import GoalPlan from '@/components/application/GoalPlan';
+import MetaPlanner from '@/components/application/MetaPlanner';
 
 export default function AplicacaoPage() {
   const [inputs, setInputs] = useState<ApplicationInputs>(() => getDefaultApplicationInputs());
@@ -103,6 +104,7 @@ export default function AplicacaoPage() {
           {/* Dashboard */}
           <div className="space-y-6 lg:col-span-9">
             <MetaHero results={results} />
+            <MetaPlanner results={results} />
             <FunnelBoard results={results} />
             <QuestionDropoff results={results} />
             <QualificationCard results={results} />
