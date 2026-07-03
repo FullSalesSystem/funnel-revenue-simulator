@@ -31,10 +31,20 @@ export interface ApplicationInputs {
   applicationStarts: number;
   questions: QuestionInput[];
   registrations: number;
-  qualified: number;
   scheduled: number;
   attended: number;
   closed: number;
+}
+
+/**
+ * PREMISSA DO FUNIL: metade dos leads qualificados tende a agendar.
+ * Qualificados não são informados — são estimados: Qualificados = Agendamentos × 2.
+ * A Taxa de Qualificação é calculada a partir dessa estimativa.
+ */
+export const QUALIFIED_TO_SCHEDULED_RATE = 50;
+
+export function qualifiedFromScheduled(scheduled: number): number {
+  return scheduled * (100 / QUALIFIED_TO_SCHEDULED_RATE);
 }
 
 // ─── DEFAULTS (exemplo realista para o cliente editar) ──────────────────────
@@ -55,7 +65,6 @@ export function getDefaultApplicationInputs(): ApplicationInputs {
       { id: 5, reached: 700 },
     ],
     registrations: 640,
-    qualified: 230,
     scheduled: 140,
     attended: 90,
     closed: 10,
@@ -72,6 +81,8 @@ export interface RateMetricDef {
   toLabel: string;
   benchmark: Benchmark;
   playbookKey: string;
+  /** taxa fixada por premissa (não é medida nem entra como alavanca de otimização) */
+  isAssumption?: boolean;
 }
 
 export type RateKey =
@@ -138,6 +149,7 @@ export const RATE_DEFS: RateMetricDef[] = [
     toLabel: 'Reuniões Agendadas',
     benchmark: { bad: { max: 40 }, good: { min: 40, max: 70 }, excellent: { min: 70 } },
     playbookKey: 'scheduling',
+    isAssumption: true,
   },
   {
     key: 'attendance',
@@ -231,6 +243,8 @@ export interface CostMetric {
 
 export interface ApplicationResults {
   inputs: ApplicationInputs;
+  /** Leads qualificados ESTIMADOS pela premissa (Agendamentos × 2) */
+  qualified: number;
   rates: RateMetricResult[];
   ratesByKey: Record<RateKey, RateMetricResult>;
   pageConversionRate: number;
@@ -259,9 +273,12 @@ export const META_TARGET = 7;
 export function calculateApplication(inputs: ApplicationInputs): ApplicationResults {
   const {
     investment, averageTicket, impressions, clicks, pageViews,
-    applicationStarts, questions, registrations, qualified,
+    applicationStarts, questions, registrations,
     scheduled, attended, closed,
   } = inputs;
+
+  // Premissa: metade dos qualificados agenda → qualificados estimados a partir dos agendamentos
+  const qualified = qualifiedFromScheduled(scheduled);
 
   // ── Taxas relativas (cada etapa vs anterior) ──
   const rateValues: Record<RateKey, number> = {
@@ -270,7 +287,7 @@ export function calculateApplication(inputs: ApplicationInputs): ApplicationResu
     start: pct(applicationStarts, pageViews),
     completion: pct(registrations, applicationStarts),
     qualification: pct(qualified, registrations),
-    scheduling: pct(scheduled, qualified),
+    scheduling: QUALIFIED_TO_SCHEDULED_RATE,
     attendance: pct(attended, scheduled),
     close: pct(closed, attended),
   };
@@ -378,6 +395,7 @@ export function calculateApplication(inputs: ApplicationInputs): ApplicationResu
 
   return {
     inputs,
+    qualified,
     rates,
     ratesByKey,
     pageConversionRate,
@@ -495,6 +513,7 @@ export function computeLevers(results: ApplicationResults): Lever[] {
   const levers: Lever[] = [];
 
   for (const def of RATE_DEFS) {
+    if (def.isAssumption) continue; // premissa fixa não é alavanca
     const r = ratesByKey[def.key];
     const excellentTarget = def.benchmark.excellent.min;
     const goodTarget = def.benchmark.good.min;
@@ -555,7 +574,7 @@ export function projectAllAt(results: ApplicationResults, level: 'good' | 'excel
   for (const def of RATE_DEFS) {
     const current = results.ratesByKey[def.key].value;
     const target = level === 'good' ? def.benchmark.good.min : def.benchmark.excellent.min;
-    overrides[def.key] = Math.max(current, target);
+    overrides[def.key] = def.isAssumption ? current : Math.max(current, target);
   }
   return projectScenario(results, overrides);
 }
@@ -655,7 +674,7 @@ function ratesAtLevel(results: ApplicationResults, level: PlanLevel): Record<Rat
   const out = {} as Record<RateKey, number>;
   for (const def of RATE_DEFS) {
     const current = results.ratesByKey[def.key].value;
-    if (level === 'atual') out[def.key] = current;
+    if (level === 'atual' || def.isAssumption) out[def.key] = current;
     else {
       const floor = level === 'bom' ? def.benchmark.good.min : def.benchmark.excellent.min;
       out[def.key] = Math.max(current, floor);
@@ -694,7 +713,7 @@ export function planForGoal(results: ApplicationResults, revenueGoal: number): G
     pageViews: inputs.pageViews,
     starts: inputs.applicationStarts,
     registrations: inputs.registrations,
-    qualified: inputs.qualified,
+    qualified: results.qualified,
     scheduled: inputs.scheduled,
     attended: inputs.attended,
     closed: inputs.closed,
@@ -741,6 +760,7 @@ export function planForGoal(results: ApplicationResults, revenueGoal: number): G
   const baseVolumes = closesNeeded > 0 ? volumesForCloses(closesNeeded, baseRates) : null;
   const adjustments: GoalAdjustment[] = [];
   for (const def of RATE_DEFS) {
+    if (def.isAssumption) continue; // premissa fixa não entra como ajuste
     const r = results.ratesByKey[def.key];
     const targetExcellent = def.benchmark.excellent.min;
     if (r.value >= targetExcellent) continue;

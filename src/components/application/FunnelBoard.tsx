@@ -35,7 +35,7 @@ export default function FunnelBoard({ results }: { results: ApplicationResults }
     { key: 'pageViews', label: 'Visualizações de Página', volume: inputs.pageViews, costKey: 'costPerPageView', costLabel: 'Custo/Visualização' },
     { key: 'starts', label: 'Iniciaram a Aplicação', volume: inputs.applicationStarts, costKey: 'costPerStart', costLabel: 'Custo/Início' },
     { key: 'registrations', label: 'Cadastros', volume: inputs.registrations, costKey: 'costPerLead', costLabel: 'CPL' },
-    { key: 'qualified', label: 'Leads Qualificados', volume: inputs.qualified, costKey: 'costPerQualified', costLabel: 'CPLQ' },
+    { key: 'qualified', label: 'Leads Qualificados (estimado)', volume: results.qualified, costKey: 'costPerQualified', costLabel: 'CPLQ' },
     { key: 'scheduled', label: 'Reuniões Agendadas', volume: inputs.scheduled, costKey: 'costPerScheduled', costLabel: 'Custo/Agendada' },
     { key: 'attended', label: 'Reuniões Realizadas', volume: inputs.attended, costKey: 'costPerAttended', costLabel: 'Custo/Realizada' },
     { key: 'closed', label: 'Fechamentos', volume: inputs.closed, costKey: 'costPerClose', costLabel: 'CPA' },
@@ -63,6 +63,22 @@ export default function FunnelBoard({ results }: { results: ApplicationResults }
                 <div className="flex w-full items-center justify-center py-1">
                   {(() => {
                     const rate = rateForGap(i);
+                    if (rate.isAssumption) {
+                      return (
+                        <span
+                          className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1"
+                          title="Premissa fixa: metade dos qualificados agenda"
+                        >
+                          <span className="text-[11px] font-medium text-gray-400">
+                            {rate.shortLabel}:{' '}
+                            <span className="font-bold tabular-nums text-gray-300">
+                              {formatPercent(rate.value)}
+                            </span>{' '}
+                            <span className="text-gray-600">· premissa</span>
+                          </span>
+                        </span>
+                      );
+                    }
                     const color = getTierColor(rate.tier);
                     return (
                       <a

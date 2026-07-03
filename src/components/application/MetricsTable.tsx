@@ -17,7 +17,7 @@ export default function MetricsTable({ results }: { results: ApplicationResults 
     { label: 'Visualizações de Página', value: inputs.pageViews },
     { label: 'Iniciaram a Aplicação', value: inputs.applicationStarts },
     { label: 'Cadastros', value: inputs.registrations },
-    { label: 'Leads Qualificados', value: inputs.qualified },
+    { label: 'Leads Qualificados (estimado)', value: results.qualified },
     { label: 'Reuniões Agendadas', value: inputs.scheduled },
     { label: 'Reuniões Realizadas', value: inputs.attended },
     { label: 'Fechamentos', value: inputs.closed },
@@ -82,13 +82,19 @@ export default function MetricsTable({ results }: { results: ApplicationResults 
                       {formatPercent(r.value)}
                     </td>
                     <td className="px-2 py-2 text-right text-[11px] tabular-nums text-gray-500">
-                      ≥ {r.benchmark.good.min}%
+                      {r.isAssumption ? '—' : `≥ ${r.benchmark.good.min}%`}
                     </td>
                     <td className="px-2 py-2 text-right text-[11px] tabular-nums text-gray-500">
-                      ≥ {r.benchmark.excellent.min}%
+                      {r.isAssumption ? '—' : `≥ ${r.benchmark.excellent.min}%`}
                     </td>
                     <td className="px-3.5 py-2 text-right">
-                      <TierChip tier={r.tier} />
+                      {r.isAssumption ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+                          Premissa
+                        </span>
+                      ) : (
+                        <TierChip tier={r.tier} />
+                      )}
                     </td>
                   </tr>
                 ))}

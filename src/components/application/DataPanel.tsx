@@ -123,8 +123,16 @@ export default function DataPanel({
       </Group>
 
       <Group title="Comercial">
-        <Field label="Leads Qualificados" step={5} value={inputs.qualified} onChange={(v) => onChange('qualified', v)} />
         <Field label="Reuniões Agendadas" step={5} value={inputs.scheduled} onChange={(v) => onChange('scheduled', v)} />
+        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+            Leads Qualificados (estimado)
+          </p>
+          <p className="mt-0.5 text-sm font-bold tabular-nums text-gray-200">{inputs.scheduled * 2}</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-gray-600">
+            Premissa: metade dos qualificados agenda → qualificados = agendamentos × 2
+          </p>
+        </div>
         <Field label="Reuniões Realizadas (compareceram)" step={5} value={inputs.attended} onChange={(v) => onChange('attended', v)} />
         <Field label="Fechamentos" step={1} value={inputs.closed} onChange={(v) => onChange('closed', v)} />
       </Group>

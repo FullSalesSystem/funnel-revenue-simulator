@@ -24,7 +24,7 @@ export default function QualificationCard({ results }: { results: ApplicationRes
   return (
     <SectionCard
       title="Qualificação: CPL ↔ CPLQ"
-      subtitle="A taxa de qualificação liga o custo por lead ao custo por lead qualificado — nos dois sentidos."
+      subtitle="A taxa de qualificação liga o custo por lead ao custo por lead qualificado — nos dois sentidos. Qualificados são estimados pela premissa: metade dos qualificados agenda (qualificados = agendamentos × 2)."
     >
       {/* a equação com os números atuais */}
       <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-white/[0.06] bg-[#0b0f1a]/60 px-4 py-4">

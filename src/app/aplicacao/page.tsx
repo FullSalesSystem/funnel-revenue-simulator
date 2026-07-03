@@ -130,8 +130,10 @@ function buildWarnings(inputs: ApplicationInputs): string[] {
   check(inputs.pageViews > inputs.clicks, 'Visualizações de página maiores que cliques.');
   check(inputs.applicationStarts > inputs.pageViews, 'Inícios de aplicação maiores que visualizações.');
   check(inputs.registrations > inputs.applicationStarts, 'Cadastros maiores que inícios de aplicação.');
-  check(inputs.qualified > inputs.registrations, 'Qualificados maiores que cadastros.');
-  check(inputs.scheduled > inputs.qualified, 'Agendamentos maiores que leads qualificados.');
+  check(
+    inputs.scheduled * 2 > inputs.registrations,
+    'Agendamentos implicam mais qualificados que cadastros (premissa: metade dos qualificados agenda). Confira os números.'
+  );
   check(inputs.attended > inputs.scheduled, 'Comparecimentos maiores que agendamentos.');
   check(inputs.closed > inputs.attended, 'Fechamentos maiores que reuniões realizadas.');
 
