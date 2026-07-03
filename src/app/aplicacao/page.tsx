@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   ApplicationInputs,
   calculateApplication,
@@ -15,6 +14,7 @@ import MetricsTable from '@/components/application/MetricsTable';
 import QualificationCard from '@/components/application/QualificationCard';
 import GoalPlan from '@/components/application/GoalPlan';
 import MetaPlanner from '@/components/application/MetaPlanner';
+import ApplyCTA, { APPLY_URL } from '@/components/application/ApplyCTA';
 
 export default function AplicacaoPage() {
   const [inputs, setInputs] = useState<ApplicationInputs>(() => getDefaultApplicationInputs());
@@ -61,14 +61,13 @@ export default function AplicacaoPage() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f1a]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] transition-colors hover:bg-white/[0.1]"
-            >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
               <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <circle cx="12" cy="12" r="9" strokeWidth={2} />
+                <circle cx="12" cy="12" r="4.5" strokeWidth={2} />
+                <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
               </svg>
-            </Link>
+            </span>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-white">
                 Funil de Aplicação — Visão Completa
@@ -78,9 +77,14 @@ export default function AplicacaoPage() {
               </p>
             </div>
           </div>
-          <span className="hidden rounded-full border border-indigo-500/25 bg-indigo-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-300 sm:block">
-            Funil principal
-          </span>
+          <a
+            href={APPLY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-lg bg-[#FF063C] px-4 py-2 text-xs font-bold tracking-tight text-white transition-colors hover:bg-[#e0052f]"
+          >
+            Quero meu diagnóstico
+          </a>
         </div>
       </header>
 
@@ -110,6 +114,7 @@ export default function AplicacaoPage() {
             <QualificationCard results={results} />
             <MetricsTable results={results} />
             <GoalPlan results={results} />
+            <ApplyCTA />
           </div>
         </div>
       </div>
